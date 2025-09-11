@@ -1,0 +1,45 @@
+{
+    "file": "C:\\Users\\djadh\\AppData\\Local\\Temp\\tmpml8rhunw.wav",
+    "fs": 2000,
+    "duration_s": 2.236,
+    "beats_detected": 8,
+    "bpm": 209.1112770724421,
+    "hrv": {
+        "mean_IBI_ms": 286.92857142857144,
+        "median_IBI_ms": 276.5,
+        "bpm_mean": 209.1112770724421,
+        "SDNN_ms": 23.518483106251722,
+        "RMSSD_ms": 40.219709098898264,
+        "pNN50_pct": 16.666666666666664,
+        "CV": 0.08196633395258254,
+        "SD1_ms": 30.643718769105032,
+        "SD2_ms": 12.930606916850236
+    },
+    "SNR_dB": 9.524527688480287,
+    "energy": {
+        "pct_energy_below_200Hz": 95.80784247118478,
+        "spectral_centroid_hz": 76.83770532877155
+    },
+    "S1S2": {
+        "S1_mean": 0.0754477018112787,
+        "S2_mean": 0.08279400038027722,
+        "S1_to_S2_ratio": 0.9112701580397543
+    },
+    "extra_peaks": {
+        "cycles_checked": 7,
+        "cycles_with_extra_peaks": 0
+    },
+    "irregular_spacing": {
+        "intervals_mean_s": 0.28692857142857137,
+        "intervals_std_s": 0.023518483106251716,
+        "intervals_cv": 0.08196633395258254,
+        "n_outliers": 0
+    },
+    "150_500Hz_band": {
+        "band_hz": [
+            150,
+            500
+        ],
+        "band_energy_pct": 6.489449139896125
+    }
+}
