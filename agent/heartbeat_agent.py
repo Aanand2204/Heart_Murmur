@@ -9,9 +9,9 @@ from langchain_community.vectorstores import FAISS
 from langchain_huggingface import HuggingFaceEmbeddings
 
 from langchain_groq import ChatGroq
-from langchain.agents import AgentExecutor, create_tool_calling_agent
-from langchain_core.prompts import ChatPromptTemplate
-from langchain.tools import Tool, tool
+from langchain_core.tools import Tool, tool
+from langgraph.prebuilt import create_react_agent
+
 
 # Load environment variables
 load_dotenv()
@@ -51,7 +51,7 @@ def make_retriever_tool(retriever):
         Call this tool whenever a user asks about heartbeat analysis results.
         Returns the content of relevant documents.
         """
-        docs = retriever.get_relevant_documents(query)
+        docs = retriever.invoke(query)
         # Combine docs into a single string for valid tool output
         return "\n\n".join([d.page_content for d in docs])
 
@@ -68,7 +68,7 @@ def build_heartbeat_agent(json_path: str):
     # Initialize Groq Chat Model
     # Ensuring GROQ_API_KEY is in env is the user's responsibility or handled by load_dotenv if present
     llm = ChatGroq(
-        model_name="llama-3.1-70b-versatile",
+        model_name="llama-3.3-70b-versatile",
         temperature=0
     )
 
@@ -86,16 +86,10 @@ Your role:
 - Keep explanations clear and concise.
 """
 
-    prompt = ChatPromptTemplate.from_messages([
-        ("system", system_message),
-        ("human", "{input}"),
-        ("placeholder", "{agent_scratchpad}"),
-    ])
+    # Create the agent using LangGraph
+    # In this version, system_message is passed via 'prompt'
+    agent = create_react_agent(llm, tools, prompt=system_message)
 
-    # Construct the agent
-    agent = create_tool_calling_agent(llm, tools, prompt)
 
-    # Create the executor
-    agent_executor = AgentExecutor(agent=agent, tools=tools, verbose=True)
+    return agent
 
-    return agent_executor

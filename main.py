@@ -115,8 +115,10 @@ def run_agent_chat():
 
         with st.spinner("Agent is thinking..."):
             try:
-                response = st.session_state.agent.invoke({"input": user_input})
-                reply = response.get("output", "No response.")
+                response = st.session_state.agent.invoke({"messages": [("user", user_input)]})
+                # LangGraph returns 'messages' list, last one is the AI response
+                reply = response["messages"][-1].content
+
             except Exception as e:
                 reply = f"Error processing request: {str(e)}"
 

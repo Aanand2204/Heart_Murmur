@@ -2,8 +2,7 @@ __pycache__
 
 demo_videos/
 
-heartenv/
-heart_env_new/
+venv/
 
 .env
 

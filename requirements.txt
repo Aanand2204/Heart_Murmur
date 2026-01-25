@@ -31,13 +31,18 @@ pydantic
 langchain-groq
 
 
+
+
 # langchain
-langchain>=0.2.0
+langchain
 langchain-community
 langchain_google_genai
 langchain-text-splitters
 chromadb
 faiss-cpu
 openpyxl
+langchain-core
 langchain-huggingface
+langgraph
 sentence-transformers
+
