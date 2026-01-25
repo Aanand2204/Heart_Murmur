@@ -4,19 +4,18 @@ from typing import Optional
 from dotenv import load_dotenv
 
 from langchain_core.documents import Document
-from langchain.text_splitter import RecursiveCharacterTextSplitter
-from langchain.vectorstores import FAISS
+from langchain_text_splitters import RecursiveCharacterTextSplitter
+from langchain_community.vectorstores import FAISS
 from langchain_huggingface import HuggingFaceEmbeddings
 
-from autogen_agentchat.agents import AssistantAgent
-from autogen_ext.models.ollama import OllamaChatCompletionClient
-from autogen_ext.models.openai import OpenAIChatCompletionClient
-
+from langchain_groq import ChatGroq
+from langchain.agents import AgentExecutor, create_tool_calling_agent
+from langchain_core.prompts import ChatPromptTemplate
+from langchain.tools import Tool, tool
 
 # Load environment variables
 load_dotenv()
 os.environ["HF_TOKEN"] = os.getenv("HF_TOKEN")
-
 
 # --- Retriever setup ---
 def build_retriever(json_path: str):
@@ -44,12 +43,17 @@ def build_retriever(json_path: str):
 
 # --- Tool wrapper ---
 def make_retriever_tool(retriever):
-    def heart_retriever_tool(query: str, top_k: Optional[int] = 4) -> list[Document]:
+    
+    @tool
+    def heart_retriever_tool(query: str) -> str:
         """
         Retrieve information from heartbeat_report.json.
         Call this tool whenever a user asks about heartbeat analysis results.
+        Returns the content of relevant documents.
         """
-        return retriever.get_relevant_documents(query)[:top_k]
+        docs = retriever.get_relevant_documents(query)
+        # Combine docs into a single string for valid tool output
+        return "\n\n".join([d.page_content for d in docs])
 
     return heart_retriever_tool
 
@@ -57,39 +61,41 @@ def make_retriever_tool(retriever):
 # --- Agent factory ---
 def build_heartbeat_agent(json_path: str):
     retriever = build_retriever(json_path)
-    heart_retriever_tool = make_retriever_tool(retriever)
+    # The tool must be a list for the agent
+    retriever_tool = make_retriever_tool(retriever)
+    tools = [retriever_tool]
 
-    ollama_model_client = OllamaChatCompletionClient(model="llama3.2")
+    # Initialize Groq Chat Model
+    # Ensuring GROQ_API_KEY is in env is the user's responsibility or handled by load_dotenv if present
+    llm = ChatGroq(
+        model_name="llama-3.1-70b-versatile",
+        temperature=0
+    )
 
-    agent = AssistantAgent(
-        name="HeartbeatAnalysisAgent",
-        model_client=ollama_model_client,
-        tools=[heart_retriever_tool],
-        description="An agent that answers questions about heartbeat audio analysis results based on classification and signal processing metrics.",
-        system_message="""
-You are HeartbeatAnalysisAgent, an expert assistant for analyzing heartbeat recordings. 
-You have access to pre-computed JSON reports that contain the following metrics:
-- Classification results (Artifact, Murmur, Normal)
-- BPM (beats per minute) and rhythm regularity
-- HRV (Heart Rate Variability) metrics: mean BPM, SDNN, RMSSD, CV
-- SNR (signal-to-noise ratio)
-- Energy distribution (how signal power is distributed across frequencies)
-- S1/S2 amplitude ratio
-- Extra peak detection (murmurs, gallops, abnormal beats)
-- Irregular spacing statistics
-- Frequency band energy (150–500 Hz band for murmurs)
-- Visual outputs (waveform, spectrogram, histograms)
+    # System Message
+    system_message = """
+You are HeartbeatAnalysisAgent, an expert assistant for analyzing heartbeat recordings.
+You have access to pre-computed JSON reports via your tools.
 
 Your role:
-- Answer user questions using ONLY the data provided in the JSON report or general definitions of the above metrics.
+- Answer user questions using ONLY the data provided in the JSON report or general definitions of the metrics.
 - If asked about medical interpretation, provide general information only (e.g., what a high HRV usually means), not medical advice.
 - If a query is unrelated to heartbeat analysis, classification, or signal processing, reply with: "I don't know."
 - Do not make up or hallucinate answers.
-- And If user greets you with "Hi" or something like "who are you", greet back and reply as well about you.
-- Keep explanations clear and concise. 
-- When a user explicitly asks you to stop or when a conversation session is complete, respond with "TERMINATE".
-""",
-        reflect_on_tool_use=True
-    )
+- If user greets you, greet back.
+- Keep explanations clear and concise.
+"""
 
-    return agent
+    prompt = ChatPromptTemplate.from_messages([
+        ("system", system_message),
+        ("human", "{input}"),
+        ("placeholder", "{agent_scratchpad}"),
+    ])
+
+    # Construct the agent
+    agent = create_tool_calling_agent(llm, tools, prompt)
+
+    # Create the executor
+    agent_executor = AgentExecutor(agent=agent, tools=tools, verbose=True)
+
+    return agent_executor

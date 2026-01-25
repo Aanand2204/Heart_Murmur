@@ -8,9 +8,8 @@ import tensorflow as tf
 import matplotlib.pyplot as plt
 import json
 import asyncio
-import nest_asyncio
+import asyncio
 from report_generator.report_generator import generate_hospital_report
-nest_asyncio.apply()
 
 from classification import load_model, HeartSoundClassifier
 from signal_processing import HeartbeatAnalyzer
@@ -114,18 +113,13 @@ def run_agent_chat():
     if user_input:
         st.session_state.chat_history.append(("user", user_input))
 
-        async def get_response():
-            response = await st.session_state.agent.run(task=user_input)
-            return response.messages[-1].content if response.messages else "No response."
+        with st.spinner("Agent is thinking..."):
+            try:
+                response = st.session_state.agent.invoke({"input": user_input})
+                reply = response.get("output", "No response.")
+            except Exception as e:
+                reply = f"Error processing request: {str(e)}"
 
-        # ✅ reuse event loop instead of asyncio.run()
-        try:
-            loop = asyncio.get_running_loop()
-        except RuntimeError:
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
-
-        reply = loop.run_until_complete(get_response())
         st.session_state.chat_history.append(("bot", reply))
 
     # Display chat
