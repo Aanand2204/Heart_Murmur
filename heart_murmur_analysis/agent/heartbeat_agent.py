@@ -15,9 +15,17 @@ from langgraph.prebuilt import create_react_agent
 
 # Load environment variables
 load_dotenv()
-os.environ["HF_TOKEN"] = os.getenv("HF_TOKEN")
+if hf_token := os.getenv("HF_TOKEN"):
+    os.environ["HF_TOKEN"] = hf_token
 
 # --- Retriever setup ---
+import streamlit as st
+
+@st.cache_resource
+def get_embeddings():
+    return HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
+
+@st.cache_data
 def build_retriever(json_path: str):
     """Load JSON, split into chunks, and return a retriever."""
     with open(json_path, "r") as f:
@@ -34,7 +42,7 @@ def build_retriever(json_path: str):
     doc_chunks = splitter.split_documents(docs)
 
     # Embeddings
-    embeddings = HuggingFaceEmbeddings(model="all-MiniLM-L6-v2")
+    embeddings = get_embeddings()
 
     # Vectorstore + retriever
     vectorstore = FAISS.from_documents(doc_chunks, embeddings)
@@ -59,17 +67,21 @@ def make_retriever_tool(retriever):
 
 
 # --- Agent factory ---
-def build_heartbeat_agent(json_path: str):
+def build_heartbeat_agent(json_path: str, groq_api_key: Optional[str] = None, hf_token: Optional[str] = None):
+    # Set HF token if provided
+    if hf_token:
+        os.environ["HF_TOKEN"] = hf_token
+    
     retriever = build_retriever(json_path)
     # The tool must be a list for the agent
     retriever_tool = make_retriever_tool(retriever)
     tools = [retriever_tool]
 
     # Initialize Groq Chat Model
-    # Ensuring GROQ_API_KEY is in env is the user's responsibility or handled by load_dotenv if present
     llm = ChatGroq(
         model_name="llama-3.3-70b-versatile",
-        temperature=0
+        temperature=0,
+        groq_api_key=groq_api_key or os.getenv("GROQ_API_KEY")
     )
 
     # System Message

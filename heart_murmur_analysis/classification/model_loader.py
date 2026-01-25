@@ -12,8 +12,13 @@ class CustomLSTM(OriginalLSTM):
         super().__init__(*args, **kwargs)
 
 
+import pathlib
+
+BASE_DIR = pathlib.Path(__file__).parent.parent
+DEFAULT_MODEL_PATH = str(BASE_DIR / "models" / "lstm_model.h5")
+
 @st.cache_resource
-def load_model(model_path: str = "models/lstm_model.h5"):
+def load_model(model_path: str = DEFAULT_MODEL_PATH):
     """
     Loads the trained LSTM model with custom LSTM layer.
     """

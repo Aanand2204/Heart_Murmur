@@ -9,14 +9,14 @@ import matplotlib.pyplot as plt
 import json
 import asyncio
 import asyncio
-from report_generator.report_generator import generate_hospital_report
+from heart_murmur_analysis.report_generator import generate_hospital_report
 
-from classification import load_model, HeartSoundClassifier
-from signal_processing import HeartbeatAnalyzer
-from utils import pretty_print_analysis, export_json
+from heart_murmur_analysis.classification import load_model, HeartSoundClassifier
+from heart_murmur_analysis.signal_processing import HeartbeatAnalyzer
+from heart_murmur_analysis.utils import pretty_print_analysis, export_json
 
 # Agent imports
-from agent.heartbeat_agent import build_heartbeat_agent
+from heart_murmur_analysis.agent import build_heartbeat_agent
 
 # --- Suppress TF / deprecation warnings ---
 warnings.filterwarnings("ignore", category=FutureWarning)
@@ -33,16 +33,27 @@ CLASS_MAP = {
 REPORT_PATH = "reports/heartbeat_report.json"
 
 
-# ----------------------------
-# Deep Learning Classification
-# ----------------------------
-def run_classification(y, sr, results_dict):
-    st.subheader("🔎 Classification (Deep Learning)")
+@st.cache_data
+def load_audio(uploaded_file):
+    """Cached audio loading."""
+    y, sr = librosa.load(uploaded_file, sr=22050)
+    return y, sr
+
+
+@st.cache_data
+def get_classification_results(y, sr):
+    """Cached classification logic (logic only, no UI)."""
     model = load_model()
     classifier = HeartSoundClassifier(model)
-
     pred_class, scores = classifier.predict(y, sr)
     class_name = CLASS_MAP.get(pred_class, "Unknown")
+    return class_name, pred_class, scores
+
+
+def run_classification(y, sr, results_dict):
+    st.subheader("🔎 Classification (Deep Learning)")
+    
+    class_name, pred_class, scores = get_classification_results(y, sr)
 
     st.write(f"**Predicted Class:** {class_name} ({pred_class})")
     st.write("**Raw Scores:**", scores.tolist())
@@ -59,19 +70,30 @@ def run_classification(y, sr, results_dict):
     return results_dict
 
 
-# ----------------------------
-# Signal Processing Analysis
-# ----------------------------
+@st.cache_data
+def get_signal_processing_results(file_bytes):
+    """Cached signal processing logic."""
+    with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as tmp:
+        tmp.write(file_bytes)
+        temp_wav_path = tmp.name
+
+    try:
+        analyzer = HeartbeatAnalyzer(temp_wav_path)
+        sp_results = analyzer.analyze()
+        # Remove '_data' from cached results as it's too large and contains non-serializable objects sometimes
+        serializable_results = {k: v for k, v in sp_results.items() if k != "_data"}
+        return serializable_results
+    finally:
+        if os.path.exists(temp_wav_path):
+            os.remove(temp_wav_path)
+
+
 def run_signal_processing(uploaded_file, results_dict):
     st.subheader("📊 Signal Processing Analysis")
 
-    # Save uploaded file to temp path
-    with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as tmp:
-        tmp.write(uploaded_file.getbuffer())
-        temp_wav_path = tmp.name
-
-    analyzer = HeartbeatAnalyzer(temp_wav_path)
-    sp_results = analyzer.analyze()
+    # Use file bytes for caching key
+    file_bytes = uploaded_file.getvalue()
+    sp_results = get_signal_processing_results(file_bytes)
 
     # Merge classification + signal processing results
     results_dict.update(sp_results)
@@ -86,9 +108,13 @@ def run_signal_processing(uploaded_file, results_dict):
     os.makedirs("reports", exist_ok=True)
     export_json(results_dict, REPORT_PATH)
 
-    # Show plots
+    # Re-running analyzer for plots (plots are not easily serializable for cache_data)
+    with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as tmp:
+        tmp.write(file_bytes)
+        temp_wav_path = tmp.name
+    analyzer = HeartbeatAnalyzer(temp_wav_path)
+    analyzer.analyze()
     analyzer.plot_all()
-
     os.remove(temp_wav_path)
 
 
@@ -135,12 +161,25 @@ def run_agent_chat():
 # ----------------------------
 def main():
     st.title("❤️ Heartbeat Analysis App")
+    
+    # --- Sidebar for Patient Details ---
+    st.sidebar.header("👤 Patient Information")
+    p_name = st.sidebar.text_input("Full Name", "John Doe")
+    p_age = st.sidebar.number_input("Age", min_value=0, max_value=120, value=52)
+    p_gender = st.sidebar.selectbox("Gender", ["Male", "Female", "Other"], index=0)
+    
+    patient_info = {
+        "name": p_name,
+        "age": p_age,
+        "gender": p_gender
+    }
+
     st.write("Upload a heartbeat `.wav` file to analyze using Deep Learning, Signal Processing, and chat with the AI agent.")
 
     uploaded_file = st.file_uploader("Upload heartbeat audio (.wav)", type=["wav"])
 
     if uploaded_file is not None:
-        y, sr = librosa.load(uploaded_file, sr=22050)
+        y, sr = load_audio(uploaded_file)
 
         results_dict = {}
 
@@ -163,9 +202,4 @@ def main():
 
 
 if __name__ == "__main__":
-    patient_info = {
-        "name": "John Doe",
-        "age": 52,
-        "gender": "Male"
-    }
     main()

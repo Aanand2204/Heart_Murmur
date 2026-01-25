@@ -1,46 +1,46 @@
 {
     "classification": "Murmur",
-    "file": "C:\\Users\\aanan\\AppData\\Local\\Temp\\tmp35fu1v_6.wav",
+    "file": "C:\\Users\\aanan\\AppData\\Local\\Temp\\tmp97bfqyr_.wav",
     "fs": 2000,
-    "duration_s": 6.638,
-    "beats_detected": 12,
-    "bpm": 110.09174311926606,
+    "duration_s": 9.0,
+    "beats_detected": 6,
+    "bpm": 73.35860129600196,
     "hrv": {
-        "mean_IBI_ms": 545.0,
-        "median_IBI_ms": 505.49999999999994,
-        "bpm_mean": 110.09174311926606,
-        "SDNN_ms": 93.00026881681579,
-        "RMSSD_ms": 102.80308847500645,
-        "pNN50_pct": 70.0,
-        "CV": 0.17064269507672622,
-        "SD1_ms": 76.58659768160774,
-        "SD2_ms": 106.92330454842646
+        "mean_IBI_ms": 817.9,
+        "median_IBI_ms": 620.0,
+        "bpm_mean": 73.35860129600196,
+        "SDNN_ms": 654.0920615632022,
+        "RMSSD_ms": 1101.4293838008862,
+        "pNN50_pct": 100.0,
+        "CV": 0.7997213125849152,
+        "SD1_ms": 895.737376643772,
+        "SD2_ms": 230.92726578585976
     },
-    "SNR_dB": 6.926341211604585,
+    "SNR_dB": 9.180956763998854,
     "energy": {
-        "pct_energy_below_200Hz": 63.17430025694181,
-        "spectral_centroid_hz": 174.34764588402828
+        "pct_energy_below_200Hz": 49.137694299538374,
+        "spectral_centroid_hz": 228.41216359652387
     },
     "S1S2": {
-        "S1_mean": 0.5372006614357511,
-        "S2_mean": 0.5178466090077151,
-        "S1_to_S2_ratio": 1.0373741028547465
+        "S1_mean": 0.19397197355066143,
+        "S2_mean": 0.18825437824145178,
+        "S1_to_S2_ratio": 1.0303716458688486
     },
     "extra_peaks": {
-        "cycles_checked": 11,
+        "cycles_checked": 5,
         "cycles_with_extra_peaks": 0
     },
     "irregular_spacing": {
-        "intervals_mean_s": 0.545,
-        "intervals_std_s": 0.0930002688168158,
-        "intervals_cv": 0.17064269507672625,
-        "n_outliers": 1
+        "intervals_mean_s": 0.8179000000000001,
+        "intervals_std_s": 0.6540920615632022,
+        "intervals_cv": 0.7997213125849152,
+        "n_outliers": 2
     },
     "150_500Hz_band": {
         "band_hz": [
             150,
             500
         ],
-        "band_energy_pct": 49.0287303845507
+        "band_energy_pct": 84.48521588677946
     }
 }
