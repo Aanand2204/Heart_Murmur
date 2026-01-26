@@ -36,9 +36,9 @@ A deep learning application that uses LSTM neural networks to detect heart murmu
 
 4. **Run the Application**
    ```powershell
-   streamlit run filename.py
+   streamlit run test_file.py
    ```
-   Create a python file with the code
+   Download the test_file.py 
 
 5. **Access the Application**
    - Open your web browser
