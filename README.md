@@ -47,29 +47,51 @@ A deep learning application that uses LSTM neural networks to detect heart murmu
    - Get instant heart murmur predictions with signal processing !
 
 
-##  About Model Architecture
+## 🧠 Concepts & Terminologies
 
+### Heart Sounds
+- **S1 ("Lub")**: Closing of the mitral and tricuspid valves.
+- **S2 ("Dub")**: Closing of the aortic and pulmonary valves.
+- **Murmur**: Abnormal sound caused by turbulent blood flow.
+- **Artifact**: Noise unrelated to actual heart sounds (e.g., movement, microphone noise).
+
+---
+
+## 🛠️ Signal Processing Pipeline
+
+### 1. Preprocessing
+- **Bandpass Filter (20–500 Hz)**: Retains important heart sound frequencies while removing noise.
+- **Envelope Detection**: Smooths the waveform to highlight heartbeats for peak detection.
+
+### 2. Extracted Metrics
+The application extracts several clinical metrics to assist in diagnosis:
+
+| Metric | Description |
+|--------|-------------|
+| **BPM** | Average heart rate in beats per minute. |
+| **IBV/IBI** | Inter-Beat Interval – time between successive heartbeats. |
+| **HRV** | Heart Rate Variability (SDNN, RMSSD, pNN50). |
+| **SNR** | Signal-to-Noise Ratio (recording quality). |
+| **S1/S2 Ratio** | Helps distinguish murmurs from normal beats. |
+| **Spectral Energy** | Energy distribution below 200 Hz. |
+
+---
+
+## 📊 Visualizations
+- **Waveform with Peaks**: Visualizes detected beats.
+- **Spectrogram**: Frequency vs. time representation.
+- **Poincaré Plot**: Nonlinear HRV visualization.
+
+---
+
+## 🤖 Model Architecture
 The LSTM model uses a hybrid CNN-LSTM architecture:
+- **Input**: Raw audio data (52 timesteps).
+- **CNN Layers**: 3 Conv1D layers for feature extraction.
+- **LSTM Layers**: 2 LSTM layers for temporal modeling.
+- **Output**: 3 classes (**Normal**, **Murmur**, **Artifact**).
 
-- **Input**: Raw audio data (52 timesteps, 1 feature)
-- **CNN Layers**: 3 Conv1D layers with MaxPooling and BatchNormalization
-- **LSTM Layers**: 2 LSTM layers for sequence modeling
-- **Dense Layers**: 3 fully connected layers with dropout
-- **Output**: 3 classes (Normal, Abnormal, Murmur)
-- **Total Parameters**: 14,130,371 (53.90 MB)
-
-
-### Performance Tips
-
-- **Sample Rate**: The model expects 22050 Hz (automatically handled)
-
-
-## Technical Details
-
-### Input Preprocessing
-- Audio is loaded at 22050 Hz sample rate
-- Truncated or padded to exactly 52 samples
-- Reshaped to (1, 52, 1) for model input
+---
 
 
 
