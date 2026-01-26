@@ -6,12 +6,6 @@ venv/
 
 .env
 
-README.md
-
-project_info.md
-
-create_dummy_model.py
-
 .pypirc
 
 dist
