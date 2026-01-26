@@ -30,15 +30,15 @@ A deep learning application that uses LSTM neural networks to detect heart murmu
    You should see `(hvenv)` at the beginning of your command prompt.
 
 3. **Install the package**
-```bash
-pip install heart-murmur-analysis
-```
+   ```bash
+   pip install heart-murmur-analysis
+   ```
 
 4. **Run the Application**
-   Create a file with the code
    ```powershell
-   streamlit run file_name.py
+   streamlit run filename.py
    ```
+   Create a python file with the code
 
 5. **Access the Application**
    - Open your web browser
