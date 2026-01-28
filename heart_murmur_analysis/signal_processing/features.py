@@ -94,13 +94,25 @@ def detect_extra_peaks_per_cycle(peaks: np.ndarray, fs: int, intervals_s: np.nda
     res = {"cycles_checked": 0, "cycles_with_extra_peaks": 0}
     if len(peaks) < 2 or intervals_s.size == 0:
         return res
+    
     mean_cycle = np.mean(intervals_s)
+    # Optimization: Use indices instead of repeated filtering
+    # Since peaks are sorted, we can avoid O(N^2) by using pointers or searchsorted
     for i in range(len(peaks) - 1):
         start = peaks[i]
-        end_time = (peaks[i] / fs) + mean_cycle
-        end = int(round(end_time * fs))
-        in_cycle = peaks[(peaks >= start) & (peaks <= end)]
-        if len(in_cycle) > 2:
+        end = start + int(mean_cycle * fs)
+        
+        # We know peaks[i] is at 'start'. 
+        # We want to see how many peaks are between peaks[i] and end
+        # Since peaks is sorted, we can use searchsorted or just check neighbors
+        # For heartbeat cycles, peaks are few, but we still want to avoid full array scan
+        j = i + 1
+        count = 0
+        while j < len(peaks) and peaks[j] <= end:
+            count += 1
+            j += 1
+            
+        if count > 1: # i.e. more than just the next S1/S2 peak expected
             res["cycles_with_extra_peaks"] += 1
         res["cycles_checked"] += 1
     return res

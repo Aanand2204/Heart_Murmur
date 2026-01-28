@@ -25,7 +25,7 @@ A deep learning application that uses LSTM neural networks to detect heart murmu
 
 2. **Activate Virtual Environment**
    ```powershell
-   hvenv\Scripts\Activate.ps1
+   hvenv\Scripts\activate
    ```
    You should see `(hvenv)` at the beginning of your command prompt.
 

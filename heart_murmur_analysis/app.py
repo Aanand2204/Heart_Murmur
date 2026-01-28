@@ -53,6 +53,7 @@ def get_classification_results(y, sr):
 def run_classification(y, sr, results_dict):
     st.subheader("🔎 Classification (Deep Learning)")
     
+    # Classification is now mostly handled in run_analysis or cached
     class_name, pred_class, scores = get_classification_results(y, sr)
 
     st.write(f"**Predicted Class:** {class_name} ({pred_class})")
@@ -70,22 +71,7 @@ def run_classification(y, sr, results_dict):
     return results_dict
 
 
-@st.cache_data
-def get_signal_processing_results(file_bytes):
-    """Cached signal processing logic."""
-    with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as tmp:
-        tmp.write(file_bytes)
-        temp_wav_path = tmp.name
 
-    try:
-        analyzer = HeartbeatAnalyzer(temp_wav_path)
-        sp_results = analyzer.analyze()
-        # Remove '_data' from cached results as it's too large and contains non-serializable objects sometimes
-        serializable_results = {k: v for k, v in sp_results.items() if k != "_data"}
-        return serializable_results
-    finally:
-        if os.path.exists(temp_wav_path):
-            os.remove(temp_wav_path)
 
 
 def run_signal_processing(uploaded_file, results_dict):
@@ -93,29 +79,43 @@ def run_signal_processing(uploaded_file, results_dict):
 
     # Use file bytes for caching key
     file_bytes = uploaded_file.getvalue()
-    sp_results = get_signal_processing_results(file_bytes)
-
-    # Merge classification + signal processing results
-    results_dict.update(sp_results)
+    sp_results_data = get_signal_processing_results_with_data(file_bytes)
+    
+    # Merge classification + signal processing results (minus the raw data for storage)
+    serializable_results = {k: v for k, v in sp_results_data.items() if k != "_data"}
+    results_dict.update(serializable_results)
 
     # Pretty print
     pretty_print_analysis(results_dict)
 
     # Show results in Streamlit
-    st.json({k: v for k, v in results_dict.items() if k != "_data"})
+    st.json(serializable_results)
 
-    # Export results (classification + signal processing)
+    # Export results
     os.makedirs("reports", exist_ok=True)
     export_json(results_dict, REPORT_PATH)
 
-    # Re-running analyzer for plots (plots are not easily serializable for cache_data)
+    # Use INJECTED results for plotting - MUCH FASTER
+    # No need to re-run analysis
+    from heart_murmur_analysis.signal_processing import HeartbeatAnalyzer
+    analyzer = HeartbeatAnalyzer(None) # Path not needed if we inject results
+    analyzer._last_results = sp_results_data
+    analyzer.plot_all()
+
+@st.cache_data
+def get_signal_processing_results_with_data(file_bytes):
+    """Cached signal processing logic INCLUDING raw data for plotting."""
     with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as tmp:
         tmp.write(file_bytes)
         temp_wav_path = tmp.name
-    analyzer = HeartbeatAnalyzer(temp_wav_path)
-    analyzer.analyze()
-    analyzer.plot_all()
-    os.remove(temp_wav_path)
+
+    try:
+        analyzer = HeartbeatAnalyzer(temp_wav_path)
+        sp_results = analyzer.analyze()
+        return sp_results
+    finally:
+        if os.path.exists(temp_wav_path):
+            os.remove(temp_wav_path)
 
 
 # ----------------------------
@@ -138,22 +138,42 @@ def run_agent_chat():
     user_input = st.chat_input("Ask me about your heartbeat analysis...")
     if user_input:
         st.session_state.chat_history.append(("user", user_input))
+        
+        # Display existing history
+        for role, msg in st.session_state.chat_history[:-1]:
+            with st.chat_message(role):
+                st.write(msg)
+        
+        # Display user message
+        with st.chat_message("user"):
+            st.write(user_input)
 
-        with st.spinner("Agent is thinking..."):
-            try:
-                response = st.session_state.agent.invoke({"messages": [("user", user_input)]})
-                # LangGraph returns 'messages' list, last one is the AI response
-                reply = response["messages"][-1].content
+        with st.chat_message("bot"):
+            response_container = st.empty()
+            full_reply = ""
+            
+            with st.spinner("Agent is thinking..."):
+                try:
+                    for chunk in st.session_state.agent.stream(
+                        {"messages": [("user", user_input)]}, 
+                        stream_mode="messages"
+                    ):
+                        msg, metadata = chunk
+                        if msg.content and metadata.get("langgraph_node") == "agent":
+                            full_reply += msg.content
+                            response_container.markdown(full_reply + "▌")
+                    
+                    response_container.markdown(full_reply)
+                    st.session_state.chat_history.append(("bot", full_reply))
 
-            except Exception as e:
-                reply = f"Error processing request: {str(e)}"
-
-        st.session_state.chat_history.append(("bot", reply))
-
-    # Display chat
-    for role, msg in st.session_state.chat_history:
-        with st.chat_message(role):
-            st.write(msg)
+                except Exception as e:
+                    response_container.write(f"Error processing request: {str(e)}")
+                    st.session_state.chat_history.append(("bot", f"Error: {str(e)}"))
+    else:
+        # Display chat history if no new input
+        for role, msg in st.session_state.chat_history:
+            with st.chat_message(role):
+                st.write(msg)
 
 
 # ----------------------------

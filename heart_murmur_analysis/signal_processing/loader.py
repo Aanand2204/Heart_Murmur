@@ -24,8 +24,13 @@ def load_wav(path: str, target_fs: int = None) -> Tuple[int, np.ndarray]:
 
     # Resample if needed
     if target_fs is not None and target_fs != rate:
-        n_samples = round(len(data) * float(target_fs) / rate)
-        data = signal.resample(data, n_samples)
+        # Use resample_poly for much faster resampling than signal.resample
+        # Find greatest common divisor to get up/down factors
+        from math import gcd
+        common = gcd(target_fs, rate)
+        up = target_fs // common
+        down = rate // common
+        data = signal.resample_poly(data, up, down)
         rate = target_fs
 
     return rate, data
