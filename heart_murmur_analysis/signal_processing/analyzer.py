@@ -1,16 +1,4 @@
-# signal_processing/analyzer.py
-import numpy as np
 from typing import Dict, Any
-from .loader import load_wav
-from .preprocessing import bandpass_filter, envelope
-from .features import (
-    detect_peaks_from_envelope,
-    compute_intervals, compute_hrv_metrics,
-    estimate_snr, energy_distribution, s1_s2_amplitude_ratio,
-    detect_extra_peaks_per_cycle, irregular_spacing_stats, frequency_band_energy
-)
-from .visualizer import plot_results
-
 
 class HeartbeatAnalyzer:
     def __init__(self, wav_path: str, resample_fs: int = 2000):
@@ -19,6 +7,15 @@ class HeartbeatAnalyzer:
         self._last_results = None  # cache last analysis
 
     def analyze(self) -> Dict[str, Any]:
+        import numpy as np
+        from .loader import load_wav
+        from .preprocessing import bandpass_filter, envelope
+        from .features import (
+            detect_peaks_from_envelope,
+            compute_intervals, compute_hrv_metrics,
+            estimate_snr, energy_distribution, s1_s2_amplitude_ratio,
+            detect_extra_peaks_per_cycle, irregular_spacing_stats, frequency_band_energy
+        )
         fs, raw = load_wav(self.wav_path, target_fs=self.resample_fs)
         raw = raw - np.mean(raw)  # remove DC
         filtered = bandpass_filter(raw, fs, lowcut=20.0, highcut=500.0, order=4)
@@ -65,6 +62,7 @@ class HeartbeatAnalyzer:
         if self._last_results is None:
             raise RuntimeError("Run analyze() before calling plot_all().")
 
+        from .visualizer import plot_results
         data = self._last_results["_data"]
         plot_results(
             time=data["time"],

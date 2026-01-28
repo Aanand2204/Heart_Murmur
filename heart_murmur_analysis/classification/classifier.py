@@ -1,6 +1,6 @@
 # classification/classifier.py
 import numpy as np
-import librosa
+
 
 
 class HeartSoundClassifier:
@@ -14,6 +14,7 @@ class HeartSoundClassifier:
         """
         Extract MFCC features from the audio.
         """
+        import librosa
         mfcc = librosa.feature.mfcc(y=y, sr=sr, n_mfcc=n_mfcc)
         mfcc_scaled = np.mean(mfcc.T, axis=0)
         return mfcc_scaled
@@ -34,6 +35,7 @@ class HeartSoundClassifier:
         """
         features = self.extract_features(y, sr)
         X_input = self.prepare_input(features)
-        prediction = self.model.predict(X_input)
+        # Use direct call for faster inference than model.predict
+        prediction = self.model(X_input, training=False).numpy()
         predicted_class = int(np.argmax(prediction, axis=1)[0])
         return predicted_class, prediction

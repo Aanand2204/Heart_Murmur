@@ -1,17 +1,16 @@
 import json
 from datetime import datetime
 import streamlit as st
-from docx import Document
-from docx.shared import Pt
-from docx.enum.text import WD_PARAGRAPH_ALIGNMENT
 from io import BytesIO
-from docx.shared import RGBColor
 
 # ---------------- DOCX GENERATION FUNCTION ----------------
 def create_docx_report(data, patient_info=None):
     """
     Create a DOCX report from JSON data and patient info.
     """
+    from docx import Document
+    from docx.shared import RGBColor
+    from docx.enum.text import WD_PARAGRAPH_ALIGNMENT
     if patient_info is None:
         patient_info = {"name": "Demo Patient", "age": 45, "gender": "Male"}
     

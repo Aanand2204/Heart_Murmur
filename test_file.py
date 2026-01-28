@@ -1,9 +1,9 @@
-import streamlit as st
-import tempfile
 import os
-import librosa
 import hashlib
 import json
+import streamlit as st
+import tempfile
+import time
 from heart_murmur_analysis import (
     HeartbeatAnalyzer, 
     HeartSoundClassifier, 
@@ -20,26 +20,35 @@ def get_file_hash(file_bytes):
     return hashlib.md5(file_bytes).hexdigest()
 
 @st.cache_data
-def run_heavy_analysis(tmp_path, file_hash):
+def run_heavy_analysis(file_hash, file_bytes):
     """Cached analysis and classification results."""
-    # 1. Run Analysis (Returns fs, raw, and results)
-    analyzer = HeartbeatAnalyzer(tmp_path)
-    results = analyzer.analyze()
+    # Create a temporary file inside the cached function
+    with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as tmp:
+        tmp.write(file_bytes)
+        tmp_path = tmp.name
     
-    # 2. Classification (Avoid reloading file with librosa)
-    # Get raw data from analyzer
-    raw_data = results["_data"]["raw"]
-    fs = results["fs"]
-    
-    model = cached_load_model()
-    classifier = HeartSoundClassifier(model)
-    # classifier.predict expects (y, sr)
-    pred_class, _ = classifier.predict(raw_data, fs)
-    results["classification"] = CLASS_MAP.get(pred_class, "Unknown")
-    
-    # Return serializable results and raw data for plots
-    # Keep _data for now but use it carefully
-    return results
+    try:
+        start_time = time.time()
+        # 1. Run Analysis (Returns fs, raw, and results)
+        analyzer = HeartbeatAnalyzer(tmp_path)
+        results = analyzer.analyze()
+        print(f"DEBUG: Signal analysis took {time.time() - start_time:.2f}s")
+        
+        # 2. Classification (Avoid reloading file with librosa)
+        start_time = time.time()
+        raw_data = results["_data"]["raw"]
+        fs = results["fs"]
+        
+        model = cached_load_model()
+        classifier = HeartSoundClassifier(model)
+        pred_class, _ = classifier.predict(raw_data, fs)
+        results["classification"] = CLASS_MAP.get(pred_class, "Unknown")
+        print(f"DEBUG: Classification took {time.time() - start_time:.2f}s")
+        
+        return results
+    finally:
+        if os.path.exists(tmp_path):
+            os.remove(tmp_path)
 
 @st.cache_resource
 def cached_load_model():
@@ -70,15 +79,16 @@ def main():
     patient_info = {"name": p_name, "age": p_age, "gender": p_gender}
     uploaded_file = st.file_uploader("Upload Heartbeat (.wav)", type=["wav"])
     if uploaded_file:
+        start_total = time.time()
         file_bytes = uploaded_file.getvalue()
         file_hash = get_file_hash(file_bytes)
+        print(f"DEBUG: File hashing took {time.time() - start_total:.2f}s")
         
-        with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as tmp:
-            tmp.write(file_bytes)
-            tmp_path = tmp.name
         try:
-            # 1. Run Analysis & Classification (Cached)
-            results = run_heavy_analysis(tmp_path, file_hash)
+            # 1. Run Analysis & Classification (Cached by file content)
+            with st.spinner("Analyzing Heartbeat..."):
+                results = run_heavy_analysis(file_hash, file_bytes)
+            
             serializable_results = {k: v for k, v in results.items() if k != "_data"}
             
             # 2. Dashboard Tabs
@@ -87,9 +97,13 @@ def main():
                 st.success(f"Diagnosis: {results['classification']}")
                 
                 # Re-run ONLY the plotting part, using cached results data
-                analyzer = HeartbeatAnalyzer(tmp_path)
+                # No need for the wav file on disk here because we inject results
+                start_plot = time.time()
+                analyzer = HeartbeatAnalyzer(None)
                 analyzer._last_results = results # Inject results to avoid re-analysis
                 analyzer.plot_all()
+                print(f"DEBUG: Plotting took {time.time() - start_plot:.2f}s")
+                print(f"DEBUG: TOTAL UI update took {time.time() - start_total:.2f}s")
             
             with tab2:
                 st.subheader("Interactive Analysis Chat")
@@ -98,14 +112,17 @@ def main():
                 report_content_hash = hashlib.md5(json.dumps(serializable_results).encode()).hexdigest()
                 
                 if "agent" not in st.session_state or st.session_state.get("last_report_hash") != report_content_hash:
-                    st.session_state.agent = cached_build_agent(
-                        report_content_hash,
-                        serializable_results,
-                        os.getenv("GROQ_API_KEY"),
-                        os.getenv("HF_TOKEN")
-                    )
-                    st.session_state.last_report_hash = report_content_hash
-                    st.session_state.messages = [] # Clear history on new data
+                    with st.spinner("Preparing AI Agent..."):
+                        start_agent = time.time()
+                        st.session_state.agent = cached_build_agent(
+                            report_content_hash,
+                            serializable_results,
+                            os.getenv("GROQ_API_KEY"),
+                            os.getenv("HF_TOKEN")
+                        )
+                        print(f"DEBUG: Agent preparation took {time.time() - start_agent:.2f}s")
+                        st.session_state.last_report_hash = report_content_hash
+                        st.session_state.messages = [] # Clear history on new data
                 
                 # Simple Chat Interface
                 if "messages" not in st.session_state:
@@ -147,8 +164,7 @@ def main():
                     export_json(serializable_results, report_path)
                 
                 generate_hospital_report(report_path, patient_info)
-        finally:
-            if os.path.exists(tmp_path):
-                os.remove(tmp_path)
+        except Exception as e:
+            st.error(f"Error during analysis: {e}")
 if __name__ == "__main__":
     main()

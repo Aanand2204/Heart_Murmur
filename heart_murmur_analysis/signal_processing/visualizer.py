@@ -1,12 +1,12 @@
 import numpy as np
-import matplotlib.pyplot as plt
-import scipy.signal as signal
 import streamlit as st  
 
 def plot_results(time, raw, filtered, env, fs, peaks, intervals_s):
     """
     Generate standard plots for heartbeat analysis (Streamlit-friendly).
     """
+    import matplotlib.pyplot as plt
+    import scipy.signal as signal
     # waveform + peaks
     fig, ax = plt.subplots(figsize=(14, 4))
     ax.plot(time, raw, label="raw", alpha=0.4)

@@ -1,7 +1,5 @@
 # signal_processing/loader.py
 import numpy as np
-import scipy.io.wavfile as wav
-import scipy.signal as signal
 from typing import Tuple
 
 
@@ -9,6 +7,9 @@ def load_wav(path: str, target_fs: int = None) -> Tuple[int, np.ndarray]:
     """
     Load a WAV file, convert to float32 [-1,1], mono, and resample if needed.
     """
+    import scipy.io.wavfile as wav
+    import scipy.signal as signal
+    
     rate, data = wav.read(path)
 
     # Convert to float32 in [-1,1]
@@ -25,7 +26,6 @@ def load_wav(path: str, target_fs: int = None) -> Tuple[int, np.ndarray]:
     # Resample if needed
     if target_fs is not None and target_fs != rate:
         # Use resample_poly for much faster resampling than signal.resample
-        # Find greatest common divisor to get up/down factors
         from math import gcd
         common = gcd(target_fs, rate)
         up = target_fs // common

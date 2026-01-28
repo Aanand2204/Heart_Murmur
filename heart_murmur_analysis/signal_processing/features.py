@@ -1,13 +1,11 @@
-# signal_processing/features.py
 import numpy as np
-import scipy.signal as signal
 from typing import Dict, Any
-
 
 # ---------- Peak Detection ----------
 def detect_peaks_from_envelope(env: np.ndarray, fs: int,
                             min_bpm: float = 30, max_bpm: float = 220,
                             prominence_factor: float = 0.6):
+    import scipy.signal as signal
     min_interval_s = 60.0 / max_bpm
     min_distance = int(min_interval_s * fs * 0.8)
     height = np.percentile(env, 50) + (np.max(env) - np.percentile(env, 50)) * 0.3
@@ -66,6 +64,7 @@ def estimate_snr(signal_data: np.ndarray, peaks: np.ndarray, fs: int, window_ms:
 
 
 def energy_distribution(signal_data: np.ndarray, fs: int, cutoff_hz: float = 200.0):
+    import scipy.signal as signal
     f, Pxx = signal.welch(signal_data, fs=fs, nperseg=min(4096, len(signal_data)))
     total_energy = np.trapz(Pxx, f)
     below_ix = f <= cutoff_hz
@@ -134,6 +133,7 @@ def irregular_spacing_stats(intervals_s: np.ndarray) -> Dict[str, Any]:
 
 
 def frequency_band_energy(signal_data: np.ndarray, fs: int, band=(150, 500)):
+    import scipy.signal as signal
     f, Pxx = signal.welch(signal_data, fs=fs, nperseg=min(4096, len(signal_data)))
     band_ix = (f >= band[0]) & (f <= band[1])
     band_energy = np.trapz(Pxx[band_ix], f[band_ix]) if np.any(band_ix) else 0.0
